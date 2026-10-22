@@ -16,8 +16,15 @@
     CONFIGURACION: ['Campo','Valor'],
     EVENTOS: ['Evento_ID','Coleccion','Registro_ID','Actualizado_UTC','Eliminado','Datos_JSON','Indicativo_propio']
   };
+  // Solo en la pestaña activa: la autorización vence y no queda en localStorage.
+  const AUTH_SESSION_KEY = `qso-google-oauth-session-${OWN_CALL}`;
   let token = null;
   let expires = 0;
+  function discardSession(){ token=null;expires=0;try{sessionStorage.removeItem(AUTH_SESSION_KEY);}catch{}}
+  function saveSession(){
+    try {sessionStorage.setItem(AUTH_SESSION_KEY,JSON.stringify({accessToken:token,expires,email}));} catch{}
+  }
+
   let client = null;
   let email = '';
   let bookId = '';
@@ -34,7 +41,7 @@
   async function api(url, options = {}) {
     if (!navigator.onLine) throw Error('No hay conexión a Internet. Los cambios siguen guardados localmente.');
     if (!token || Date.now() > expires - 60000) {
-      token = null;
+      discardSession();
       throw Error('La autorización de Google caducó. Pulsá «Conectar Google» para renovarla.');
     }
     const response = await fetch(url, {
@@ -45,7 +52,7 @@
     let data;
     try { data = raw ? JSON.parse(raw) : {}; } catch {data = {};}
     if (!response.ok) {
-      if (response.status === 401) {token = null; expires = 0; showStatus();}
+      if (response.status === 401) {discardSession();showStatus();}
       const reason = data?.error?.message || data?.error_description || raw.slice(0,220) || response.statusText;
       throw Error(`Google (${response.status}): ${reason}`);
     }
@@ -57,7 +64,7 @@
     const status = $('syncStatus');
     const ready = Boolean(token && Date.now() < expires - 60000 && email);
     status.textContent = !navigator.onLine ? 'Sin Internet · cambios guardados localmente'
-      : ready ? `Conectado: ${email}` : 'Google Drive sin conectar · guardado local';
+      : ready ? `Conectado: ${email}` : (localStorage.getItem(ownerKey) ? `Cuenta vinculada: ${localStorage.getItem(ownerKey)} · renová el acceso si caducó` : 'Google Drive sin conectar · guardado local');
     $('syncNow').disabled = !navigator.onLine;
     $('syncConnect').textContent = ready ? 'Renovar acceso Google' : 'Conectar Google';
     $('syncSheet').classList.toggle('hidden', !bookId);
@@ -69,14 +76,14 @@
     const identity = String(res.email).toLowerCase();
     const linked = localStorage.getItem(ownerKey);
     if (linked && linked !== identity) {
-      token = null;
-      expires = 0;
+      discardSession();
       throw Error(`El libro local ${OWN_CALL} ya está vinculado con ${linked}. No se mezclarán los datos de otra cuenta.`);
     }
     // Never bind an account until Google confirms its identity.
     localStorage.setItem(ownerKey, identity);
     email = identity;
     bookId = localStorage.getItem(docKey(identity)) || '';
+    saveSession();
     showStatus();
   }
   function getClient() {
@@ -219,7 +226,7 @@
       QSO:[headers.QSO,...qs.map(qsoRow)],
       RUEDAS:[headers.RUEDAS,...ws.map(wheelRow)],
       PARTICIPANTES:[headers.PARTICIPANTES,...ws.flatMap(personRows)],
-      CONFIGURACION:[headers.CONFIGURACION,['Indicativo',OWN_CALL],['Usuario_Google',email],['Version','QSO Log v1.4.1'],['Ultima_sincronizacion',nowIso()]]
+      CONFIGURACION:[headers.CONFIGURACION,['Indicativo',OWN_CALL],['Usuario_Google',email],['Version','QSO Log v1.5'],['Ultima_sincronizacion',nowIso()]]
     };
     // Views are only projections; EVENTOS is the authoritative append-only log.
     // Avoid deleting user data from EVENTOS, and don't rewrite it at all.
@@ -267,6 +274,7 @@
       await updateStats();
       if ($('historial').classList.contains('active')) await renderHistory();
       if ($('rueda').classList.contains('active')) await renderWheels();
+      if ($('mapa').classList.contains('active')) await renderMap();
       updateLabel(`✓ Sincronizado ${new Date().toLocaleString('es-AR')} · ${push.length} cambio(s) enviados.`);
     } catch (error) {updateLabel(`No se pudo sincronizar: ${error.message}`,true);}
     finally {syncing=false;showStatus();if(syncAgain){syncAgain=false;setTimeout(synchronize,1500);}}
@@ -280,5 +288,16 @@
   window.addEventListener('online',()=>{showStatus();schedule();});
   window.addEventListener('offline',showStatus);
   window.addEventListener('focus',()=>{if(token && email && Date.now()<expires-60000) schedule();});
+  // Recupera la misma autorización de corta duración cuando se recarga esta pestaña.
+  // Google sigue exigiendo una nueva autorización al caducar o cerrar la sesión del navegador.
+  try {
+    const saved=JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY)||'null');
+    const linked=localStorage.getItem(ownerKey);
+    if(saved && saved.accessToken && saved.expires > Date.now()+60000 && saved.email === linked){
+      token=String(saved.accessToken);expires=Number(saved.expires);email=String(saved.email);
+      bookId=localStorage.getItem(docKey(email)) || '';
+      setTimeout(async()=>{try {await currentEmail();await synchronize();} catch(error){discardSession();updateLabel(`Requiere reconectar Google: ${error.message}`,true);showStatus();}},350);
+    }else if(saved)discardSession();
+  } catch {discardSession();}
   showStatus();
 })();

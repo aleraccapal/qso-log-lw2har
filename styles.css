@@ -23,3 +23,16 @@
 .sync-panel{padding:16px;border:1px solid #386779;border-radius:12px;margin:12px 0 16px;background:rgba(18,61,79,.45)}
 .sync-panel a.secondary{display:inline-flex;align-items:center;text-decoration:none}
 .sync-panel a.hidden{display:none}
+
+/* v1.5: navegación fija, formulario claro, reportes plegables y mapa */
+.tabs{position:sticky;top:0;z-index:1000;display:grid;grid-template-columns:1fr;gap:6px;overflow:visible;padding:8px 6px 10px;margin:0 0 20px;background:#102a37;border:1px solid #335767;border-radius:12px;box-shadow:0 6px 20px #071722b8}
+.tab-row{display:grid;gap:7px;min-width:0}.tab-main{grid-template-columns:repeat(2,minmax(0,1fr))}.tab-tools{grid-template-columns:repeat(3,minmax(0,1fr))}
+.tab{white-space:nowrap;min-width:0;min-height:44px;padding:9px 6px;font-size:14px;background:#1a3846;border:1px solid #345867;text-align:center}
+.tab-main .tab{font-size:16px;min-height:47px}.tab.selected{background:#286f66;border-color:#61ddca;color:#fff}
+.callsign-field{grid-column:1/-1!important;background:linear-gradient(115deg,#163e4e,#1f605c);padding:15px;border:2px solid #5ce1c9;border-radius:12px;color:#dffff7!important;font-size:15px!important;font-weight:780!important;letter-spacing:.3px}
+.callsign-field input{min-height:57px;font-size:24px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;border:2px solid #87e7d6;background:#091f2b;color:#fff}
+.link-button{display:inline-flex;justify-content:center;align-items:center;gap:5px;min-height:42px;padding:10px 15px;border-radius:9px;border:1px solid #527486;color:#e9f6f8;background:#294453;text-decoration:none;font-weight:680}
+.link-button:hover{filter:brightness(1.12)}
+.report-panel{display:block}.report-panel>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px;color:#9aeedd;font-weight:750;cursor:pointer;min-height:37px}.report-panel>summary::-webkit-details-marker{display:none}.report-panel>summary::before{content:'▸';color:#76ded2;padding-right:4px}.report-panel[open]>summary::before{content:'▾'}.report-panel .report-columns{margin-top:14px}.report-preview{font-size:12px;color:#d3e6e4;font-weight:570}
+.map-canvas{height:440px;min-height:310px;width:100%;background:#dce5e4}.map-box{background:#dce5e4}.map-box .leaflet-container{font-family:system-ui,sans-serif}.map-contacts .unlocated{background:#563c3d}.map-credit a{color:#9ee9d8}
+@media(max-width:650px){.tabs{top:0;margin-bottom:16px;padding:7px 5px}.tab{min-height:42px;font-size:12px;padding:8px 3px}.tab-main .tab{min-height:45px;font-size:14px}.callsign-field input{font-size:22px}.map-canvas{height:370px}}

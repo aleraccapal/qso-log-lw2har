@@ -6,8 +6,14 @@ if(!/^[A-Z0-9/]{3,20}$/.test(OWN_CALL))OWN_CALL='LW2HAR';
 const DB_NAME=OWN_CALL==='LW2HAR'?'qso-log-lw2har-offline':`qso-log-user-${OWN_CALL.replace(/[^A-Z0-9]/g,'_')}-offline`;
 function formatReport(report){return report&&/^[1-5](?:[1-9]|9\+)$/.test(report)?`${report[0]}/${report.slice(1)}`:'—'}
 function reportSelectors(prefix){for(const suffix of ['R','S']){const el=$(prefix+suffix);el.innerHTML=['',...(suffix==='R'?[1,2,3,4,5]:[1,2,3,4,5,6,7,8,9,'9+'])].map(n=>`<option value="${n}">${n===''?'—':n}</option>`).join('')}setReport(prefix,'59')}
-function setReport(prefix,value){const v=/^[1-5](?:[1-9]|9\+)$/.test(value||'')?value:'';$(prefix+'R').value=v?v[0]:'';$(prefix+'S').value=v?v.slice(1):''}
+function setReport(prefix,value){const v=/^[1-5](?:[1-9]|9\+)$/.test(value||'')?value:'';$(prefix+'R').value=v?v[0]:'';$(prefix+'S').value=v?v.slice(1):'';if(typeof updateReportPreviews==='function')updateReportPreviews()}
 function getReport(prefix){const r=$(prefix+'R').value,s=$(prefix+'S').value;return r&&s?r+s:''}
+function updateReportPreviews(){
+ const q=$('qsoReportPreview'),p=$('personReportPreview');
+ if(q)q.textContent=`Enviado ${formatReport(getReport('sent'))} · Recibido ${formatReport(getReport('rcvd'))}`;
+ if(p)p.textContent=`Enviado ${formatReport(getReport('pSent'))} · Recibido ${formatReport(getReport('pRcvd'))}`;
+}
+
 function renderOwnCall(){for(const id of ['headerCall','stationCall'])$(id).textContent=OWN_CALL;$('myCall').value=OWN_CALL}
 
 const $=id=>document.getElementById(id);
@@ -47,13 +53,22 @@ function setFrequency(prefix){let freq=$(prefix+'Freq');let band=$(prefix+'Band'
 function updateSingleBand(){let v=bandMode($('freq').value);$('band').value=v.band;$('mode').value=v.mode}
 function setModeOption(id,value){const el=$(id);const v=String(value||'OTHER');if(!Array.from(el.options).some(option=>option.value===v))el.add(new Option(v,v));el.value=v}
 $('freq').addEventListener('input',updateSingleBand);
-function clearQsoForm(){editingQsoId=null;const s=localStamp();$('date').value=s.date;$('time').value=s.time;setReport('sent','59');setReport('rcvd','59');for(const id of ['call','name','city','region','country','locator','notes'])$(id).value='';$('formTitle').textContent='Registrar QSO';$('saveQso').textContent='Guardar QSO';$('repeatInfo').classList.add('hidden');message('qsoMsg','')}
+function clearQsoForm(){editingQsoId=null;const s=localStamp();$('date').value=s.date;$('time').value=s.time;setReport('sent','59');setReport('rcvd','59');for(const id of ['call','name','city','region','country','locator','notes'])$(id).value='';$('formTitle').textContent='Registrar QSO';$('saveQso').textContent='Guardar QSO';$('repeatInfo').classList.add('hidden');$('qsoReports').open=false;refreshQrzLinks();message('qsoMsg','')}
 $('resetQso').addEventListener('click',clearQsoForm);
 function singleForm(){return {call:$('call').value.trim().toUpperCase(),name:$('name').value.trim(),city:$('city').value.trim(),region:$('region').value.trim(),country:$('country').value.trim(),locator:$('locator').value.trim().toUpperCase(),notes:$('notes').value.trim(),rstSent:getReport('sent'),rstRcvd:getReport('rcvd'),date:$('date').value,time:$('time').value,freq:Number($('freq').value),band:$('band').value,mode:$('mode').value}}
 $('qsoForm').addEventListener('submit',async event=>{event.preventDefault();try{const data=singleForm();if(!isValidCall(data.call))throw Error('Ingresá un indicativo válido.');if(!Number.isInteger(data.freq)||data.freq<=0)throw Error('La frecuencia debe ser un número entero en kHz.');if(!data.date||!data.time)throw Error('Ingresá fecha y hora.');if(!isValidLocator(data.locator))throw Error('Locator no válido; usá por ejemplo FF78 o FF78AB.');const prev=editingQsoId?(await all('qsos')).find(q=>q.id===editingQsoId):null;const qso={...(prev||{}),...data,id:editingQsoId||uid(),ownCall:OWN_CALL,utc:prev&&prev.date===data.date&&prev.time===data.time?prev.utc:localToUTC(data.date,data.time),wheelId:null,wheelNumber:null,created:prev?.created||nowIso(),updated:nowIso(),adifRstSent:prev?.rstSent===data.rstSent?prev?.adifRstSent||'':'',adifRstRcvd:prev?.rstRcvd===data.rstRcvd?prev?.adifRstRcvd||'':'',adifFreq:prev?.freq===data.freq?prev?.adifFreq||'':'',adifMode:prev?.mode===data.mode?prev?.adifMode||'':'',adifSubmode:prev?.mode===data.mode?prev?.adifSubmode||'':''};await put('qsos',qso);clearQsoForm();message('qsoMsg',`✓ QSO de ${data.call} guardado en este dispositivo.`);await updateStats()}catch(error){message('qsoMsg',error.message,true)}});
 async function showRepeat(){const call=$('call').value.trim().toUpperCase();const matches=(await all('qsos')).filter(q=>q.call===call&&q.id!==editingQsoId);const box=$('repeatInfo');box.classList.toggle('hidden',!matches.length);if(matches.length){const latest=matches.slice().sort((a,b)=>b.utc.localeCompare(a.utc))[0];box.innerHTML=`🔁 <strong>Indicativo repetido: ${escapeHtml(call)}</strong>. ${matches.length} QSO anterior(es). Último: ${escapeHtml(latest.date)}, ${escapeHtml(latest.freq)} kHz. <button type="button" class="tiny" id="seeRepeats">Ver historial</button>`;$('seeRepeats').onclick=()=>{$('searchHistory').value=call;activateTab('historial')}}}
 $('call').addEventListener('input',()=>{const pos=$('call').selectionStart;$('call').value=$('call').value.toUpperCase();try{$('call').setSelectionRange(pos,pos)}catch{}showRepeat()});
-$('qrzInfo').addEventListener('click',()=>message('qsoMsg','La consulta QRZ estará disponible cuando conectemos una integración autorizada. Por ahora completá los datos manualmente.'));
+function refreshQrzLinks(){
+ for(const [id,linkId] of [['call','qrzInfo'],['pCall','pQrzInfo']]){
+   const call=$(id).value.trim().toUpperCase();const valid=isValidCall(call);
+   $(linkId).href=valid?`https://www.qrz.com/db/${encodeURIComponent(call)}`:'https://www.qrz.com/';
+   $(linkId).title=valid?`Abrir QRZ de ${call}`:'Abrir QRZ.com (indicativo no ingresado)';
+ }
+}
+$('call').addEventListener('input',refreshQrzLinks);
+$('pCall').addEventListener('input',refreshQrzLinks);
+
 async function updateStats(){const [qs,ws]=await Promise.all([all('qsos'),all('wheels')]);$('nQsos').textContent=qs.length;$('nCalls').textContent=new Set(qs.map(q=>q.call)).size;$('nWheels').textContent=ws.length;$('nImports').textContent=qs.filter(q=>q.source==='ADIF').length;$('connection').textContent=`● ${navigator.onLine?'Con Internet':'Sin Internet'} · guardado local`}
 async function wheelById(){return (await all('wheels')).find(w=>w.id===activeWheelId)}
 async function renderWheels(){const ws=(await all('wheels')).sort((a,b)=>b.number-a.number);if(!activeWheelId||!ws.some(w=>w.id===activeWheelId))activeWheelId=ws[0]?.id||null;const selector=$('wheelSelect');selector.innerHTML=ws.map(w=>`<option value="${escapeHtml(w.id)}">Rueda ${String(w.number).padStart(4,'0')} · ${escapeHtml(w.state)}</option>`).join('');selector.value=activeWheelId||'';const w=ws.find(x=>x.id===activeWheelId);$('wheelContent').classList.toggle('hidden',!w);$('noWheel').classList.toggle('hidden',!!w);$('toggleFinish').disabled=!w;if(!w){$('wheelState').textContent='Sin rueda';return}const n=String(w.number).padStart(4,'0');$('wheelState').textContent=`Rueda ${n} · ${w.state}`;$('toggleFinish').textContent=w.state==='Finalizada'?'Reabrir rueda':'Finalizar rueda';for(const [id,val] of Object.entries({wDate:w.date,wTime:w.time,wFreq:w.freq,wBand:w.band,wMode:w.mode}))$(id).value=val;renderPeople(w)}
@@ -64,13 +79,13 @@ async function saveWheelFields(){const w=await wheelById();if(!w)return;const fr
 $('wFreq').addEventListener('change',async()=>{const {band,mode}=bandMode($('wFreq').value);$('wBand').value=band;$('wMode').value=mode;await saveWheelFields()});
 for(const id of ['wDate','wTime','wMode'])$(id).addEventListener('change',saveWheelFields);
 function participantForm(){return {rstSent:getReport('pSent'),rstRcvd:getReport('pRcvd'),call:$('pCall').value.trim().toUpperCase(),name:$('pName').value.trim(),city:$('pCity').value.trim(),region:$('pRegion').value.trim(),country:$('pCountry').value.trim(),locator:$('pLocator').value.trim().toUpperCase(),notes:$('pNotes').value.trim()}}
-function resetParticipant(){editingPersonId=null;setReport('pSent','59');setReport('pRcvd','59');for(const id of ['pCall','pName','pCity','pRegion','pCountry','pLocator','pNotes'])$(id).value='';$('participantTitle').textContent='Agregar participante';$('savePerson').textContent='Agregar participante'}
+function resetParticipant(){editingPersonId=null;setReport('pSent','59');setReport('pRcvd','59');for(const id of ['pCall','pName','pCity','pRegion','pCountry','pLocator','pNotes'])$(id).value='';$('participantTitle').textContent='Agregar participante';$('savePerson').textContent='Agregar participante';$('personReports').open=false;refreshQrzLinks()}
 $('cancelPerson').addEventListener('click',resetParticipant);
 async function savePersonQso(w,p){const qs=await all('qsos');const previous=qs.find(q=>q.id===p.qsoId);const tag=`Rueda ${String(w.number).padStart(4,'0')}`;const notes=p.notes?`${p.notes} · ${tag}`:tag;const q={id:p.qsoId,ownCall:OWN_CALL,rstSent:p.rstSent||previous?.rstSent||'',rstRcvd:p.rstRcvd||previous?.rstRcvd||'',call:p.call,name:p.name,city:p.city,region:p.region,country:p.country,locator:p.locator,notes,date:w.date,time:w.time,utc:localToUTC(w.date,w.time),freq:Number(w.freq),band:w.band,mode:w.mode,wheelId:w.id,wheelNumber:w.number,created:previous?.created||nowIso(),updated:nowIso()};await put('qsos',q)}
 $('personForm').addEventListener('submit',async e=>{e.preventDefault();const w=await wheelById();if(!w)return;try{const d=participantForm();if(!isValidCall(d.call))throw Error('Indicativo inválido.');if(!isValidLocator(d.locator))throw Error('Locator no válido.');if(w.people.some(p=>p.call===d.call&&p.id!==editingPersonId))throw Error('Ese indicativo ya está en esta rueda.');let p;if(editingPersonId){p=w.people.find(x=>x.id===editingPersonId);if(!p)throw Error('Participante no encontrado.');Object.assign(p,d)}else{p={...d,id:uid(),qsoId:uid(),state:'Activo'};w.people.push(p)}w.updated=nowIso();await put('wheels',w);await savePersonQso(w,p);const savedCall=p.call;resetParticipant();await renderWheels();await updateStats();message('wheelMsg',`✓ ${savedCall} guardado en Rueda ${String(w.number).padStart(4,'0')}.`)}catch(error){message('wheelMsg',error.message,true)}});
 function renderPeople(w){const active=w.people.filter(p=>p.state==='Activo');if(!active.some(p=>p.id===currentSpeakerId))currentSpeakerId=active[0]?.id||null;const speaker=active.find(p=>p.id===currentSpeakerId);$('speakerName').textContent=speaker?`${speaker.call}${speaker.name?' · '+speaker.name:''}`:'—';$('nextSpeaker').disabled=!active.length;$('peopleRows').innerHTML=w.people.map((p,i)=>`<tr class="${p.state==='Retirado'?'retired':''} ${p.id===currentSpeakerId?'speaking':''}"><td>${i+1}</td><td><strong>${escapeHtml(p.call)}</strong></td><td>${escapeHtml(p.name)}</td><td>${escapeHtml([p.city,p.region,p.country].filter(Boolean).join(', '))}</td><td>${formatReport(p.rstSent)} / ${formatReport(p.rstRcvd)}</td><td>${escapeHtml(p.state)}</td><td><div class="row-actions"><button class="tiny" data-person="${escapeHtml(p.id)}" data-action="up" aria-label="Subir">↑</button><button class="tiny" data-person="${escapeHtml(p.id)}" data-action="down" aria-label="Bajar">↓</button><button class="tiny" data-person="${escapeHtml(p.id)}" data-action="toggle">${p.state==='Activo'?'Retirar':'Reactivar'}</button><button class="tiny" data-person="${escapeHtml(p.id)}" data-action="edit">Editar</button><button class="tiny danger" data-person="${escapeHtml(p.id)}" data-action="delete">Quitar</button></div></td></tr>`).join('');$('peopleRows').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>personAction(b.dataset.action,b.dataset.person)))}
 $('nextSpeaker').addEventListener('click',async()=>{const w=await wheelById();if(!w)return;const ps=w.people.filter(p=>p.state==='Activo');if(!ps.length)return;const idx=ps.findIndex(p=>p.id===currentSpeakerId);currentSpeakerId=ps[(idx+1)%ps.length].id;renderPeople(w)});
-async function personAction(action,id){const w=await wheelById();if(!w)return;const i=w.people.findIndex(p=>p.id===id),p=w.people[i];if(!p)return;if(action==='edit'){editingPersonId=id;setReport('pSent',p.rstSent);setReport('pRcvd',p.rstRcvd);for(const [key,val] of Object.entries({pCall:p.call,pName:p.name,pCity:p.city,pRegion:p.region,pCountry:p.country,pLocator:p.locator,pNotes:p.notes}))$(key).value=val||'';$('participantTitle').textContent=`Editar ${p.call}`;$('savePerson').textContent='Guardar cambios';$('pCall').focus();return}if(action==='delete'){if(!confirm(`¿Quitar a ${p.call} de esta rueda y borrar su QSO asociado?`))return;w.people.splice(i,1);await remove('qsos',p.qsoId);if(editingPersonId===id)resetParticipant()}if(action==='toggle')p.state=p.state==='Activo'?'Retirado':'Activo';if(action==='up'&&i>0)[w.people[i-1],w.people[i]]=[w.people[i],w.people[i-1]];if(action==='down'&&i<w.people.length-1)[w.people[i+1],w.people[i]]=[w.people[i],w.people[i+1]];w.updated=nowIso();await put('wheels',w);await renderWheels();await updateStats()}
+async function personAction(action,id){const w=await wheelById();if(!w)return;const i=w.people.findIndex(p=>p.id===id),p=w.people[i];if(!p)return;if(action==='edit'){editingPersonId=id;setReport('pSent',p.rstSent);setReport('pRcvd',p.rstRcvd);for(const [key,val] of Object.entries({pCall:p.call,pName:p.name,pCity:p.city,pRegion:p.region,pCountry:p.country,pLocator:p.locator,pNotes:p.notes}))$(key).value=val||'';$('participantTitle').textContent=`Editar ${p.call}`;$('savePerson').textContent='Guardar cambios';$('personReports').open=false;refreshQrzLinks();$('pCall').focus();return}if(action==='delete'){if(!confirm(`¿Quitar a ${p.call} de esta rueda y borrar su QSO asociado?`))return;w.people.splice(i,1);await remove('qsos',p.qsoId);if(editingPersonId===id)resetParticipant()}if(action==='toggle')p.state=p.state==='Activo'?'Retirado':'Activo';if(action==='up'&&i>0)[w.people[i-1],w.people[i]]=[w.people[i],w.people[i-1]];if(action==='down'&&i<w.people.length-1)[w.people[i+1],w.people[i]]=[w.people[i],w.people[i+1]];w.updated=nowIso();await put('wheels',w);await renderWheels();await updateStats()}
 async function renderHistory(){
   const allQ=await all('qsos');
   const search=$('searchHistory').value.trim().toUpperCase();
@@ -94,7 +109,7 @@ Lote: ${escapeHtml(q.importBatchId||'')}">${escapeHtml(q.importFile||'')}</small
 }
 $('searchHistory').addEventListener('input',renderHistory);
 $('historyOrigin').addEventListener('change',renderHistory);
-async function historyAction(action,id){const qs=await all('qsos');const q=qs.find(x=>x.id===id);if(!q)return;if(action==='delete'){if(!confirm(`¿Borrar definitivamente el QSO de ${q.call}?`))return;await remove('qsos',id);if(q.wheelId){const w=(await all('wheels')).find(x=>x.id===q.wheelId);if(w){w.people=w.people.filter(p=>p.qsoId!==id);w.updated=nowIso();await put('wheels',w)}}await renderHistory();await updateStats();return}if(q.wheelId){activeWheelId=q.wheelId;activateTab('rueda');const w=await wheelById();const p=w?.people.find(p=>p.qsoId===q.id);if(p)personAction('edit',p.id);return}editingQsoId=q.id;setReport('sent',q.rstSent);setReport('rcvd',q.rstRcvd);for(const [id,val] of Object.entries({date:q.date,time:q.time,freq:q.freq,band:q.band,mode:q.mode,call:q.call,name:q.name,city:q.city,region:q.region,country:q.country,locator:q.locator,notes:q.notes}))$(id).value=val??'';setModeOption('mode',q.mode);$('formTitle').textContent=`Editar QSO · ${q.call}`;$('saveQso').textContent='Guardar cambios';activateTab('qso');showRepeat();message('qsoMsg','Editando un QSO existente.')}
+async function historyAction(action,id){const qs=await all('qsos');const q=qs.find(x=>x.id===id);if(!q)return;if(action==='delete'){if(!confirm(`¿Borrar definitivamente el QSO de ${q.call}?`))return;await remove('qsos',id);if(q.wheelId){const w=(await all('wheels')).find(x=>x.id===q.wheelId);if(w){w.people=w.people.filter(p=>p.qsoId!==id);w.updated=nowIso();await put('wheels',w)}}await renderHistory();await updateStats();return}if(q.wheelId){activeWheelId=q.wheelId;activateTab('rueda');const w=await wheelById();const p=w?.people.find(p=>p.qsoId===q.id);if(p)personAction('edit',p.id);return}editingQsoId=q.id;setReport('sent',q.rstSent);setReport('rcvd',q.rstRcvd);for(const [id,val] of Object.entries({date:q.date,time:q.time,freq:q.freq,band:q.band,mode:q.mode,call:q.call,name:q.name,city:q.city,region:q.region,country:q.country,locator:q.locator,notes:q.notes}))$(id).value=val??'';setModeOption('mode',q.mode);$('formTitle').textContent=`Editar QSO · ${q.call}`;$('saveQso').textContent='Guardar cambios';$('qsoReports').open=false;refreshQrzLinks();activateTab('qso');showRepeat();message('qsoMsg','Editando un QSO existente.')}
 function adifField(name,value){if(value===null||value===undefined||value==='')return '';const s=String(value);return `<${name}:${new TextEncoder().encode(s).length}>${s} `}
 function qsoAdif(q){
   const date=q.utc.slice(0,10).replace(/-/g,''),time=q.utc.slice(11,19).replace(/:/g,'');
@@ -178,8 +193,151 @@ $('stationForm').addEventListener('submit',event=>{event.preventDefault();const 
 $('restoreBtn').addEventListener('click',()=>$('restoreFile').click());
 $('restoreFile').addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;try{const obj=JSON.parse(await file.text());if(obj.format!=='QSOLOG-LW2HAR-BACKUP'||obj.ownCall!==OWN_CALL||!Array.isArray(obj.qsos)||!Array.isArray(obj.wheels))throw Error('Archivo no compatible con QSO Log LW2HAR.');if(obj.qsos.length>50000||obj.wheels.length>10000)throw Error('La copia excede los límites de importación.');if(!obj.qsos.every(q=>typeof q.id==='string'&&typeof q.call==='string'&&typeof q.utc==='string')||!obj.wheels.every(w=>typeof w.id==='string'&&Array.isArray(w.people)))throw Error('La estructura de la copia es inválida.');if(!confirm(`¿Importar ${obj.qsos.length} QSO y ${obj.wheels.length} ruedas? Los registros con el mismo ID se actualizarán.`))return;for(const q of obj.qsos)await put('qsos',q);for(const w of obj.wheels)await put('wheels',w);for(const tombstone of (obj.deletions||[]))if(tombstone.store&&tombstone.recordId)await rawPut('deletions',tombstone);window.qsoSyncLocalChange?.();await updateStats();message('dataMsg','✓ Respaldo restaurado. Revisá el historial y las ruedas.')}catch(e){message('dataMsg',`Error: ${e.message}`,true)}finally{event.target.value=''}});
 function locatorCoords(grid){const g=String(grid||'').toUpperCase();if(!isValidLocator(g)||!g)return null;let lon=(g.charCodeAt(0)-65)*20-180+Number(g[2])*2,lat=(g.charCodeAt(1)-65)*10-90+Number(g[3]);let lonSize=2,latSize=1;if(g.length>=6){lon+=(g.charCodeAt(4)-65)/12;lat+=(g.charCodeAt(5)-65)/24;lonSize=1/12;latSize=1/24}if(g.length===8){lon+=Number(g[6])/120;lat+=Number(g[7])/240;lonSize=1/120;latSize=1/240}return {lon:lon+lonSize/2,lat:lat+latSize/2}}
-function svgEl(tag,attrs={},text=''){const node=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.entries(attrs).forEach(([k,v])=>node.setAttribute(k,String(v)));if(text)node.textContent=text;return node}
-async function renderMap(){const qs=(await all('qsos')).map(q=>({q,point:locatorCoords(q.locator)})).filter(v=>v.point);const svg=$('locatorMap');svg.replaceChildren();svg.append(svgEl('rect',{x:0,y:0,width:900,height:450,fill:'#0d2a3a'}));for(let x=0;x<=900;x+=90){svg.append(svgEl('line',{x1:x,y1:0,x2:x,y2:450,stroke:'#3b5868','stroke-width':.8}));svg.append(svgEl('text',{x:x+3,y:18,fill:'#779bab','font-size':11},`${Math.round(x/900*360-180)}°`))}for(let y=0;y<=450;y+=45){svg.append(svgEl('line',{x1:0,y1:y,x2:900,y2:y,stroke:'#3b5868','stroke-width':.8}));svg.append(svgEl('text',{x:6,y:y+13,fill:'#779bab','font-size':11},`${Math.round(90-y/450*180)}°`))}for(const {q,point} of qs){const x=(point.lon+180)/360*900,y=(90-point.lat)/180*450;const dot=svgEl('circle',{cx:x,cy:y,r:5,fill:'#58e5cd',stroke:'#092c35','stroke-width':2});dot.append(svgEl('title',{},`${q.call} · ${q.locator} · ${q.date}`));svg.append(dot)}$('mapCount').textContent=qs.length?`${qs.length} QSO con locator válido. Los puntos pueden superponerse.`:'Todavía no hay QSO con locator Maidenhead válido.';$('mapContacts').innerHTML=qs.slice(0,50).map(({q})=>`<span><strong>${escapeHtml(q.call)}</strong> · ${escapeHtml(q.locator)}</span>`).join('')}
+/* Mapa v1.5. Leaflet/OpenStreetMap. Geocodificación por localidad usando
+ * Open-Meteo/GeoNames, sin servicios de Nominatim públicos ni claves privadas.
+ * Sólo se consulta al mostrar el mapa y se cachean los resultados locales.
+ */
+let qsoLeafletMap=null;
+let qsoMapLayer=null;
+let qsoMapRenderSerial=0;
+let leafletLoadPromise=null;
+function loadQsoLeaflet(){
+  if(window.L)return Promise.resolve();
+  if(!navigator.onLine)return Promise.reject(Error('El mapa político necesita Internet para cargar la cartografía.'));
+  if(leafletLoadPromise)return leafletLoadPromise;
+  leafletLoadPromise=new Promise((resolve,reject)=>{
+    const css=document.createElement('link');css.rel='stylesheet';
+    css.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css';
+    document.head.append(css);
+    const js=document.createElement('script');js.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js';
+    js.async=true;
+    js.onload=()=>window.L?resolve():reject(Error('El visor del mapa no pudo inicializarse.'));
+    js.onerror=()=>reject(Error('No se pudo descargar el mapa. Comprobá Internet e intentá nuevamente.'));
+    document.head.append(js);
+  }).catch(err=>{leafletLoadPromise=null;throw err});
+  return leafletLoadPromise;
+}
+const QSO_GEO_CACHE_KEY=`qso-log-geo-cache-v1-${OWN_CALL}`;
+function geoNorm(t){return String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim()}
+function geoMatch(a,b){const x=geoNorm(a),y=geoNorm(b);return !!(x&&y&&(x===y||(x.length>=5&&y.includes(x))||(y.length>=5&&x.includes(y))))}
+const countryCodes={argentina:'ar',brasil:'br',brazil:'br',chile:'cl',uruguay:'uy',paraguay:'py',bolivia:'bo',peru:'pe',mexico:'mx',colombia:'co',venezuela:'ve',espana:'es',spain:'es',unitedstates:'us',estadosunidos:'us',usa:'us',unitedkingdom:'gb',reinounido:'gb'};
+function geoCountryMatches(wanted,entry){const n=geoNorm(wanted);if(!n)return true;const code=countryCodes[n.replace(/ /g,'')];return (code&&code===String(entry.country_code||'').toLowerCase())||geoMatch(wanted,entry.country)||n===String(entry.country_code||'').toLowerCase()}
+function geoKey(q){return [q.city,q.region,q.country].map(geoNorm).join('|')}
+function getGeoCache(){try{const c=JSON.parse(localStorage.getItem(QSO_GEO_CACHE_KEY)||'{}');return c&&typeof c==='object'&&!Array.isArray(c)?c:{}}catch{return {}}}
+function saveGeoCache(c){try{const keys=Object.keys(c);if(keys.length>350)for(const k of keys.slice(0,keys.length-350))delete c[k];localStorage.setItem(QSO_GEO_CACHE_KEY,JSON.stringify(c))}catch{}}
+async function geoCity(q,cache){
+  const key=geoKey(q);
+  if(Object.prototype.hasOwnProperty.call(cache,key))return cache[key];
+  if(!navigator.onLine)return null;
+  const url=new URL('https://geocoding-api.open-meteo.com/v1/search');
+  url.search=new URLSearchParams({name:q.city.trim(),count:'10',language:'es',format:'json'}).toString();
+  const controller=new AbortController();const wait=setTimeout(()=>controller.abort(),9000);
+  let data;
+  try{
+    const res=await fetch(url,{signal:controller.signal,mode:'cors'});
+    if(!res.ok)throw Error('Error al buscar localidad');
+    data=await res.json();
+  }finally{clearTimeout(wait)}
+  const exact=(data.results||[]).filter(r=>geoNorm(r.name)===geoNorm(q.city));
+  const country=exact.filter(r=>geoCountryMatches(q.country,r));
+  const region=country.filter(r=>!geoNorm(q.region)||geoMatch(q.region,r.admin1)||geoMatch(q.region,r.admin2));
+  let record;
+  if(region.length===1){
+    const r=region[0];record={point:{lat:Number(r.latitude),lon:Number(r.longitude)},label:[r.name,r.admin1,r.country].filter(Boolean).join(', '),reason:'localidad'};
+  } else if(region.length>1){
+    record={point:null,reason:'Localidad ambigua: agregá provincia y país o un locator Maidenhead.'};
+  } else if(exact.length){
+    record={point:null,reason:'Localidad no coincide con provincia o país; revisá los datos o ingresá Maidenhead.'};
+  }else{
+    record={point:null,reason:'No se encontró esa localidad; ingresá Maidenhead para marcar el QSO.'};
+  }
+  cache[key]=record;saveGeoCache(cache);
+  return record;
+}
+function ensureQsoLeaflet(){
+  if(qsoLeafletMap)return true;
+  if(!window.L)return false;
+  qsoLeafletMap=L.map('qsoMap',{preferCanvas:true,worldCopyJump:true,zoomControl:true}).setView([-31.4,-64.2],4);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom:18
+  }).addTo(qsoLeafletMap);
+  qsoMapLayer=L.layerGroup().addTo(qsoLeafletMap);
+  return true;
+}
+async function renderMap(){
+  const serial=++qsoMapRenderSerial;
+  const qs=await all('qsos');
+  if(serial!==qsoMapRenderSerial)return;
+  const box=$('qsoMap');
+  if(!window.L) {
+    box.textContent='Cargando cartografía…';
+    try {await loadQsoLeaflet();}
+    catch(e){if(serial===qsoMapRenderSerial){box.textContent=e.message;$('mapCount').textContent=`${qs.length} QSO en el libro; guardado local disponible.`;}return;}
+  }
+  if(serial!==qsoMapRenderSerial)return;
+  if(!qsoLeafletMap)box.replaceChildren();
+  if(!ensureQsoLeaflet())return;
+  // Se crea el mapa después de hacer visible la pestaña.
+  setTimeout(()=>qsoLeafletMap?.invalidateSize(),120);
+  qsoMapLayer.clearLayers();
+  const bounds=[];const unlocated=[];let located=0;let byGrid=0;let byCity=0;
+  const cache=getGeoCache();
+  const unresolved=[];const cityQueries=new Map();
+  function addPoint(q,point,source,label){
+    if(!point||!Number.isFinite(point.lat)||!Number.isFinite(point.lon))return;
+    const marker=L.circleMarker([point.lat,point.lon],{radius:7,color:'#fff',weight:2,fillColor:'#de2838',fillOpacity:.94});
+    marker.bindPopup(`<strong>${escapeHtml(q.call||'')}</strong><br>${escapeHtml(q.date||'')} · ${escapeHtml(q.freq||'')} kHz<br>${escapeHtml([q.city,q.region,q.country].filter(Boolean).join(', '))}<br><small>${source==='locator'?'Locator: '+escapeHtml(q.locator||''):'Localidad aproximada: '+escapeHtml(label||'')}</small>`);
+    marker.addTo(qsoMapLayer);bounds.push([point.lat,point.lon]);located++;
+    if(source==='locator')byGrid++;else byCity++;
+  }
+  function reportUnlocated(q,reason){unlocated.push({q,reason});}
+  for(const q of qs){
+    const pt=locatorCoords(q.locator);
+    if(pt){addPoint(q,{lat:pt.lat,lon:pt.lon},'locator',q.locator);continue;}
+    if(!String(q.city||'').trim()){reportUnlocated(q,'Sin Maidenhead ni localidad');continue;}
+    const key=geoKey(q);
+    if(Object.prototype.hasOwnProperty.call(cache,key)){
+      const item=cache[key];if(item?.point)addPoint(q,item.point,'localidad',item.label);
+      else reportUnlocated(q,item?.reason||'Localidad no localizada');
+      continue;
+    }
+    unresolved.push(q);
+    if(!cityQueries.has(key))cityQueries.set(key,q);
+  }
+  function showResults(pending=0){
+    if(serial!==qsoMapRenderSerial)return;
+    $('mapCount').textContent=`${located} QSO ubicados: ${byGrid} por Maidenhead, ${byCity} por localidad. ${unlocated.length} sin ubicar.${pending?` ${pending} búsquedas de localidad pendientes.`:''}`;
+    $('mapContacts').innerHTML=unlocated.slice(0,30).map(({q,reason})=>`<span class="unlocated" title="${escapeHtml(reason)}">${escapeHtml(q.call)} · ${escapeHtml(reason)}</span>`).join('');
+    qsoLeafletMap.invalidateSize();
+    if(bounds.length){qsoLeafletMap.fitBounds(bounds,{padding:[25,25],maxZoom:9});}
+  }
+  showResults(cityQueries.size);
+  // El mapa se carga en pantalla por acción del usuario; no se hacen búsquedas en segundo plano.
+  if(!navigator.onLine){
+    for(const q of unresolved)reportUnlocated(q,'Sin Internet para consultar localidad');showResults();return;
+  }
+  const entries=[...cityQueries.entries()];
+  const limit=25; // Previene ráfagas sobre un servicio comunitario en importaciones masivas.
+  for(let i=0;i<Math.min(entries.length,limit);i++){
+    if(serial!==qsoMapRenderSerial)return;
+    const [key,sample]=entries[i];
+    let result;
+    try{result=await geoCity(sample,cache)}catch{result={point:null,reason:'No se pudo consultar esta localidad (red o servicio no disponible)'}}
+    if(serial!==qsoMapRenderSerial)return;
+    for(const q of unresolved.filter(v=>geoKey(v)===key)){
+      if(result?.point)addPoint(q,result.point,'localidad',result.label);
+      else reportUnlocated(q,result?.reason||'Localidad no localizada');
+    }
+    showResults(entries.length-i-1);
+    if(i<Math.min(entries.length,limit)-1)await new Promise(done=>setTimeout(done,320));
+  }
+  if(entries.length>limit){
+    for(const [key] of entries.slice(limit))for(const q of unresolved.filter(v=>geoKey(v)===key))reportUnlocated(q,'Pendiente de localizar; volvé a abrir el mapa');
+  }
+  showResults();
+}
+
 window.addEventListener('online',updateStats);window.addEventListener('offline',updateStats);
-async function init(){for(const prefix of ['sent','rcvd','pSent','pRcvd'])reportSelectors(prefix);renderOwnCall();const s=localStamp();$('date').value=s.date;$('time').value=s.time;updateSingleBand();await dbReady;await updateStats();await renderWheels();if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service Worker no instalado:',err))}
+async function init(){for(const prefix of ['sent','rcvd','pSent','pRcvd'])reportSelectors(prefix);for(const id of ['sentR','sentS','rcvdR','rcvdS','pSentR','pSentS','pRcvdR','pRcvdS'])$(id).addEventListener('change',updateReportPreviews);updateReportPreviews();refreshQrzLinks();renderOwnCall();const s=localStamp();$('date').value=s.date;$('time').value=s.time;updateSingleBand();await dbReady;await updateStats();await renderWheels();if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Service Worker no instalado:',err))}
 init().catch(error=>{console.error(error);$('connection').textContent='Error de almacenamiento';message('qsoMsg','El navegador no permitió abrir el almacenamiento local. Abrí la aplicación desde HTTPS y habilitá almacenamiento del sitio.',true)});

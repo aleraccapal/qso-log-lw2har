@@ -1,60 +1,52 @@
-QSO LOG v1.4.1 · AUTENTICACIÓN GOOGLE Y SINCRONIZACIÓN EN PREPARACIÓN
-==============================================================
+QSO LOG v1.5 — ACTUALIZACIÓN DESDE GITHUB
+========================================
 
-ESTADO
-- Registro de QSO, ruedas, historial, mapa y ADIF mantienen funcionamiento offline.
-- Reportes RS enviados y recibidos, por defecto 5/9, editables.
-- Importación ADIF conserva origen, archivo y fecha de importación.
-- Se añadió sincronización con Google Drive/Sheets de cada usuario, sin API_KEY.
-- El OAuth Client ID ya está configurado. La conexión Google NO ESTÁ VALIDADA
-  contra una cuenta real: las pruebas automatizadas simulan APIs de Google.
-  Falta verificar inicio de sesión, creación de planilla y sincronización real.
+Sitio actual: https://aleraccapal.github.io/qso-log-lw2har/
+Repositorio: https://github.com/aleraccapal/qso-log-lw2har
 
-ARCHIVOS
-- index.html, app.js, adif.js, styles.css: interfaz y datos locales.
-- sync.js: Google Identity Services + Google Drive y Sheets.
-- sync-config.js: identificador OAuth público que debe configurar el titular.
-- sw.js, manifest.webmanifest, iconos: instalación PWA offline.
+SUBIDA WEB
+----------
+1. Extraé este ZIP en tu computadora.
+2. Abrí https://github.dev/aleraccapal/qso-log-lw2har
+3. Reemplazá el contenido de TODOS los archivos que tengan el mismo nombre
+   y agregá cualquier archivo nuevo. Confirmá con commit/push.
+4. Comprobá la página HTTPS. Si tarda en actualizarse, recargá una vez.
+5. NO borres datos del navegador ni desinstales QSO Log para actualizar.
 
-ANTES DE USAR LA SINCRONIZACIÓN EN PRODUCCIÓN
-1. Crear un proyecto en Google Cloud (un único proyecto para la aplicación).
-2. Habilitar Google Sheets API y Google Drive API.
-3. Configurar Google Auth Platform > Branding/Audience. Seleccionar audiencia
-   Externa. Agregar usuarios de prueba para el modo Testing. Para habilitar más
-   usuarios en general, Google puede exigir publicar y verificar la aplicación.
-4. Crear cliente OAuth 2.0 de tipo Aplicación web. En Orígenes autorizados de
-   JavaScript incluir exactamente: https://aleraccapal.github.io
-   NO agregar /qso-log-lw2har/ al origen, ni un URI de redirección.
-5. El ID OAuth público ya está incluido en sync-config.js.
-   No poner client_secret, contraseña, token de acceso ni API_KEY en GitHub.
-6. Subir a GitHub Pages todos los archivos de la carpeta, no el ZIP.
-7. En la app Datos > Mi estación ingresar indicativo; elegir Conectar Google,
-   autorizar Google Drive y sincronizar. Se crea una planilla independiente
-   QSO Log - <SD> en el Drive de esa cuenta de Google.
+Si usás Add file > Upload files de GitHub, comprobá en el resumen de cambios
+que realmente se actualizaron app.js, index.html, styles.css, sync.js y sw.js.
 
-MODELO DE SINCRONIZACIÓN
-- Cada cuenta de Google mantiene sus propias planillas; cada distintiva tiene
-  datos locales separados en el dispositivo. La cuenta se vincula al indicativo.
-- En Google Sheets, EVENTOS es el historial autoritativo inmutable de cambios
-  (incluidos borrados). QSO, RUEDAS y PARTICIPANTES son vistas legibles.
-- NO modificar manualmente EVENTOS ni QSO/RUEDAS/PARTICIPANTES en Sheets,
-  porque las ediciones directas no se importan y las vistas se regeneran.
-- La sincronización se intenta automáticamente después de cambios locales
-  mientras la aplicación esté abierta y tenga autorización vigente.
-- Sin Internet los cambios quedan guardados localmente.
-- Al cerrar completamente la PWA, el token deja de existir; al volver a abrir,
-  hay que pulsar Conectar Google para obtener un token nuevo. No se garantiza
-  sincronización en segundo plano con la PWA cerrada.
-- Resolución básica de ediciones concurrentes: última marca temporal gana.
-  Los relojes de teléfono, tableta y computadora deben estar bien ajustados.
-  Se recomienda evitar edición simultánea del mismo QSO en dos dispositivos.
-- Un borrado se propaga como tombstone. Los archivos JSON se pueden exportar
-  como respaldo, incluyendo tombstones para evitar resurrecciones.
+NOVEDADES
+---------
+• QRZ gratuito: abrir ficha web del corresponsal, NO autocompletado XML.
+• Barra superior fija de dos filas; indicativo más destacado.
+• Provincia/región y país antes de localidad; reportes RS plegables.
+• Mapa interactivo OpenStreetMap con puntos rojos por locator Maidenhead;
+  sin locator, geocodifica por localidad si está disponible y no es ambigua.
+• Autorización Google conservada solo durante la vigencia del token y la
+  sesión de la pestaña. Al expirar o cerrar el navegador habrá que reconectar.
+• Service Worker con búsqueda en red para obtener versiones nuevas;
+  guardado offline local sin cambios.
 
-COMPATIBILIDAD
-- Conserva la base local de LW2HAR en IndexedDB de las versiones anteriores.
-- No borres el almacenamiento del sitio ni desinstales la app antes de tener
-  tu respaldo cuando existan QSO reales.
-- La planilla anterior creada con Apps Script no se vincula automáticamente:
-  OAuth creará otra planilla propia. La planilla anterior no será modificada.
-- La sincronización con QRZ.com continúa pendiente.
+MAPA
+----
+Se necesita Internet para cargar cartografía Leaflet/OpenStreetMap y para
+consultar localidades en Open-Meteo/GeoNames. No se descargan mapas offline.
+Sin región/país, los nombres ambiguos quedan sin marcar hasta aclararlos.
+Se almacenan localmente búsquedas de localidades exitosas o ambiguas.
+Máximo 25 búsquedas nuevas por apertura del mapa para evitar tráfico excesivo.
+OpenStreetMap: https://www.openstreetmap.org/copyright
+Open-Meteo: https://open-meteo.com/en/docs/geocoding-api
+
+GOOGLE
+------
+Conservar el ID de cliente OAuth público (sync-config.js). Nunca colocar un
+Client Secret ni contraseñas dentro del repositorio público.
+La autorización de corta duración se guarda temporalmente en sessionStorage
+(dentro del navegador). No es una sesión permanente ni un refresh token.
+No usar dispositivos públicos o compartidos para iniciar sesión con Google.
+
+ARCHIVOS DE ESTA VERSIÓN
+------------------------
+index.html, styles.css, app.js, adif.js, sync.js, sync-config.js,
+manifest.webmanifest, sw.js, icon-192.png, icon-512.png, LEEME.txt.
