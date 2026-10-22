@@ -1,64 +1,60 @@
-QSO LOG · EDICIÓN OFFLINE 1.3 — IMPORTAR ARCHIVOS ADIF + REPORTES RS
-=================================================================
+QSO LOG v1.4.1 · AUTENTICACIÓN GOOGLE Y SINCRONIZACIÓN EN PREPARACIÓN
+==============================================================
 
-Esta actualización conserva los QSO del indicativo LW2HAR que ya están guardados
-localmente en la v1.1. NO borres los datos del sitio ni desinstales la aplicación.
+ESTADO
+- Registro de QSO, ruedas, historial, mapa y ADIF mantienen funcionamiento offline.
+- Reportes RS enviados y recibidos, por defecto 5/9, editables.
+- Importación ADIF conserva origen, archivo y fecha de importación.
+- Se añadió sincronización con Google Drive/Sheets de cada usuario, sin API_KEY.
+- El OAuth Client ID ya está configurado. La conexión Google NO ESTÁ VALIDADA
+  contra una cuenta real: las pruebas automatizadas simulan APIs de Google.
+  Falta verificar inicio de sesión, creación de planilla y sincronización real.
 
-NOVEDADES 1.3
-- Datos > Importar archivo .adi: selección de archivos .adi y .adif, sin Internet.
-- La fecha/hora del QSO se toma del archivo ADIF (UTC); la fecha de importación
-  se guarda en un campo SEPARADO (importedAt, ISO 8601).
-- Origen ADIF, nombre del archivo y lote de importación quedan registrados.
-- Historial: etiqueta ADI importado, fecha y hora de importación, filtro por origen.
-- Se comprueban duplicados por indicativo, minuto UTC, frecuencia y modo.
-- Un archivo reimportado no duplica los QSO que ya existen.
-- Importaciones atómicas en IndexedDB, con confirmación y recuento de
-  nuevos / duplicados / inválidos.
-- Se conservan los RST originales al exportar ADIF, incluido CW (ej. 599),
-  mientras no se modifiquen los reportes desde la aplicación.
-- El archivo de respaldo JSON incluye los metadatos de procedencia.
-- Para importar se requiere CALL, QSO_DATE, TIME_ON y FREQ válidos; los
-  registros incompletos se omiten (no se inventan datos faltantes).
+ARCHIVOS
+- index.html, app.js, adif.js, styles.css: interfaz y datos locales.
+- sync.js: Google Identity Services + Google Drive y Sheets.
+- sync-config.js: identificador OAuth público que debe configurar el titular.
+- sw.js, manifest.webmanifest, iconos: instalación PWA offline.
 
-NOVEDADES ANTERIORES
-- Dos reportes independientes por QSO: ENVIADO y RECIBIDO.
-- Valor inicial 5/9 en ambos, con R 1 a 5 y S 1 a 9 más 9+.
-- Reportes editables para QSO individuales y participantes de ruedas.
-- Historia: columna con ambos reportes. ADIF: RST_SENT y RST_RCVD.
-- Datos > Mi estación: configurable y separado local por distintiva.
-- Respaldos JSON y exportaciones ADIF usan distintiva configurada.
-- La base anterior de LW2HAR se preserva en el mismo navegador.
+ANTES DE USAR LA SINCRONIZACIÓN EN PRODUCCIÓN
+1. Crear un proyecto en Google Cloud (un único proyecto para la aplicación).
+2. Habilitar Google Sheets API y Google Drive API.
+3. Configurar Google Auth Platform > Branding/Audience. Seleccionar audiencia
+   Externa. Agregar usuarios de prueba para el modo Testing. Para habilitar más
+   usuarios en general, Google puede exigir publicar y verificar la aplicación.
+4. Crear cliente OAuth 2.0 de tipo Aplicación web. En Orígenes autorizados de
+   JavaScript incluir exactamente: https://aleraccapal.github.io
+   NO agregar /qso-log-lw2har/ al origen, ni un URI de redirección.
+5. El ID OAuth público ya está incluido en sync-config.js.
+   No poner client_secret, contraseña, token de acceso ni API_KEY en GitHub.
+6. Subir a GitHub Pages todos los archivos de la carpeta, no el ZIP.
+7. En la app Datos > Mi estación ingresar indicativo; elegir Conectar Google,
+   autorizar Google Drive y sincronizar. Se crea una planilla independiente
+   QSO Log - <SD> en el Drive de esa cuenta de Google.
 
-IMPORTANTE PARA LOS REGISTROS ANTIGUOS
-Los registros de la v1.1 no incluyen reportes de señal; aparecen como «—»
-hasta que sean editados. No se inventan reportes históricos.
+MODELO DE SINCRONIZACIÓN
+- Cada cuenta de Google mantiene sus propias planillas; cada distintiva tiene
+  datos locales separados en el dispositivo. La cuenta se vincula al indicativo.
+- En Google Sheets, EVENTOS es el historial autoritativo inmutable de cambios
+  (incluidos borrados). QSO, RUEDAS y PARTICIPANTES son vistas legibles.
+- NO modificar manualmente EVENTOS ni QSO/RUEDAS/PARTICIPANTES en Sheets,
+  porque las ediciones directas no se importan y las vistas se regeneran.
+- La sincronización se intenta automáticamente después de cambios locales
+  mientras la aplicación esté abierta y tenga autorización vigente.
+- Sin Internet los cambios quedan guardados localmente.
+- Al cerrar completamente la PWA, el token deja de existir; al volver a abrir,
+  hay que pulsar Conectar Google para obtener un token nuevo. No se garantiza
+  sincronización en segundo plano con la PWA cerrada.
+- Resolución básica de ediciones concurrentes: última marca temporal gana.
+  Los relojes de teléfono, tableta y computadora deben estar bien ajustados.
+  Se recomienda evitar edición simultánea del mismo QSO en dos dispositivos.
+- Un borrado se propaga como tombstone. Los archivos JSON se pueden exportar
+  como respaldo, incluyendo tombstones para evitar resurrecciones.
 
-INSTALACIÓN / ACTUALIZACIÓN EN GITHUB PAGES
-1. Entrar al repositorio y subir TODOS los archivos extraídos de este ZIP.
-2. Sustituir los archivos anteriores y confirmar los cambios.
-3. Abrir la web con Internet, actualizar la página (si es necesario dos veces).
-4. No borrar almacenamiento del navegador, ni datos de aplicación.
-5. Antes de subir o actualizar, usar Datos > Descargar copia completa (.json).
-
-SINCRONIZACIÓN EN GOOGLE
-NO ESTÁ ACTIVADA TODAVÍA. Para que cada radioaficionado utilice su propio
-Google Drive se necesita configurar Google OAuth (cliente web de Google).
-El antiguo Apps Script se conserva intacto y no interviene en esta edición.
-No incrustar claves ni credenciales privadas en archivos públicos de GitHub.
-
-SEGURIDAD Y LÍMITES
-- Cambiar de indicativo selecciona otra base local. No altera otros libros.
-- Las copias de seguridad JSON contienen datos personales de los contactos.
-- El cambio de cuenta de Google y el enlace con sus archivos se implementarán
-  en la fase de autenticación; una distintiva sola NO verifica la identidad.
-- Guardar un respaldo JSON antes de actualizar o cambiar de dispositivo.
-- Con esta versión dos dispositivos aún NO se sincronizan entre sí.
-
-NOTAS SOBRE ADIF
-- Los tiempos QSO_DATE y TIME_ON en ADIF se interpretan como UTC, conforme
-  al uso estándar del formato. El historial muestra el horario local del equipo.
-- Se aceptan archivos de hasta 20 MiB y hasta 50.000 QSO por archivo.
-- La comparación de duplicados al minuto puede considerar iguales contactos
-  realmente distintos que coincidan en ese minuto, modo y frecuencia.
-- La importación es solo local: Google OAuth / Sheets sigue pendiente.
-- La opción de configurar la SD no verifica la identidad del titular.
+COMPATIBILIDAD
+- Conserva la base local de LW2HAR en IndexedDB de las versiones anteriores.
+- No borres el almacenamiento del sitio ni desinstales la app antes de tener
+  tu respaldo cuando existan QSO reales.
+- La planilla anterior creada con Apps Script no se vincula automáticamente:
+  OAuth creará otra planilla propia. La planilla anterior no será modificada.
+- La sincronización con QRZ.com continúa pendiente.
