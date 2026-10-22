@@ -1,61 +1,64 @@
-QSO LOG — LW2HAR — EDICIÓN OFFLINE 1.1
-====================================
+QSO LOG · EDICIÓN OFFLINE 1.3 — IMPORTAR ARCHIVOS ADIF + REPORTES RS
+=================================================================
 
-QUÉ CONTIENE
-- index.html: pantalla principal.
-- styles.css: presentación para computadora y móvil.
-- app.js: registro y base local IndexedDB.
-- sw.js: archivos de aplicación disponibles sin conexión después de la primera carga.
-- manifest.webmanifest e iconos: instalación como aplicación web (PWA).
+Esta actualización conserva los QSO del indicativo LW2HAR que ya están guardados
+localmente en la v1.1. NO borres los datos del sitio ni desinstales la aplicación.
 
-QUÉ FUNCIONA
-1. Guardar, editar y borrar contactos individuales.
-2. Frecuencia introducida en kHz, sugerencia automática de banda y modo editable.
-3. Fecha y hora local, UTC interno para exportar ADIF.
-4. Indicativos repetidos, búsqueda y consulta del historial.
-5. Ruedas numeradas: participantes, turno manual, reordenar, retirar/reactivar,
-   finalizar/reabrir, editar y eliminar. Cada participante genera un solo QSO.
-6. Mapa esquemático de contactos calculado desde locators Maidenhead.
-7. Exportación ADIF, copia completa JSON e importación de esa copia.
-8. Funcionamiento sin Internet después de primera instalación vía HTTPS.
+NOVEDADES 1.3
+- Datos > Importar archivo .adi: selección de archivos .adi y .adif, sin Internet.
+- La fecha/hora del QSO se toma del archivo ADIF (UTC); la fecha de importación
+  se guarda en un campo SEPARADO (importedAt, ISO 8601).
+- Origen ADIF, nombre del archivo y lote de importación quedan registrados.
+- Historial: etiqueta ADI importado, fecha y hora de importación, filtro por origen.
+- Se comprueban duplicados por indicativo, minuto UTC, frecuencia y modo.
+- Un archivo reimportado no duplica los QSO que ya existen.
+- Importaciones atómicas en IndexedDB, con confirmación y recuento de
+  nuevos / duplicados / inválidos.
+- Se conservan los RST originales al exportar ADIF, incluido CW (ej. 599),
+  mientras no se modifiquen los reportes desde la aplicación.
+- El archivo de respaldo JSON incluye los metadatos de procedencia.
+- Para importar se requiere CALL, QSO_DATE, TIME_ON y FREQ válidos; los
+  registros incompletos se omiten (no se inventan datos faltantes).
 
-CÓMO ABRIRLA EN LA COMPUTADORA
-- Extraer TODOS los archivos del ZIP a una carpeta.
-- Como prueba rápida, probar doble clic en index.html. La compatibilidad del almacenamiento
-  al abrir archivos locales (file://) varía según navegador. Para uso confiable, publicar
-  en HTTPS o abrir un servidor local.
-- Con Python instalado: abrir una terminal en la carpeta y ejecutar:
-      python -m http.server 8000
-  Luego entrar a http://localhost:8000 desde el navegador en la computadora.
+NOVEDADES ANTERIORES
+- Dos reportes independientes por QSO: ENVIADO y RECIBIDO.
+- Valor inicial 5/9 en ambos, con R 1 a 5 y S 1 a 9 más 9+.
+- Reportes editables para QSO individuales y participantes de ruedas.
+- Historia: columna con ambos reportes. ADIF: RST_SENT y RST_RCVD.
+- Datos > Mi estación: configurable y separado local por distintiva.
+- Respaldos JSON y exportaciones ADIF usan distintiva configurada.
+- La base anterior de LW2HAR se preserva en el mismo navegador.
 
-CÓMO INSTALARLA EN ANDROID
-1. Subir el contenido de la carpeta a un alojamiento estático HTTPS, por ejemplo
-   GitHub Pages o Netlify Drop. La carpeta debe contener index.html en la raíz.
-2. Abrir la URL publicada desde Chrome en el teléfono o la tableta CON INTERNET.
-3. En Chrome, menú de tres puntos > Instalar aplicación / Añadir a pantalla de inicio.
-4. Abrir una vez la aplicación con conexión y luego probar en modo avión.
+IMPORTANTE PARA LOS REGISTROS ANTIGUOS
+Los registros de la v1.1 no incluyen reportes de señal; aparecen como «—»
+hasta que sean editados. No se inventan reportes históricos.
 
-IMPORTANTE: Cada navegador o dispositivo tiene su PROPIA base local. No hay
-sincronización entre teléfono, tableta y computadora en esta versión. Para mover
-registros, descargar copia JSON en Datos e importarla en el otro dispositivo.
+INSTALACIÓN / ACTUALIZACIÓN EN GITHUB PAGES
+1. Entrar al repositorio y subir TODOS los archivos extraídos de este ZIP.
+2. Sustituir los archivos anteriores y confirmar los cambios.
+3. Abrir la web con Internet, actualizar la página (si es necesario dos veces).
+4. No borrar almacenamiento del navegador, ni datos de aplicación.
+5. Antes de subir o actualizar, usar Datos > Descargar copia completa (.json).
 
-GOOGLE SHEETS
-La planilla 'QSO Log LW2HAR' ya existe en Drive con pestañas QSO, RUEDAS,
-PARTICIPANTES y CONFIGURACION. No está vinculada a esta versión de la interfaz.
-El servidor Apps Script que se creó antes queda intacto y no necesita alterarse.
-No ampliar su acceso a 'Cualquier persona' ni publicar la API_KEY. La próxima fase
-requiere una solución autenticada para sincronización bidireccional.
+SINCRONIZACIÓN EN GOOGLE
+NO ESTÁ ACTIVADA TODAVÍA. Para que cada radioaficionado utilice su propio
+Google Drive se necesita configurar Google OAuth (cliente web de Google).
+El antiguo Apps Script se conserva intacto y no interviene en esta edición.
+No incrustar claves ni credenciales privadas en archivos públicos de GitHub.
 
-QRZ
-No hay consultas QRZ ni subida automática a QRZ Logbook en esta edición.
-Las credenciales NO deben introducirse en la interfaz ni incrustarse en archivos web.
+SEGURIDAD Y LÍMITES
+- Cambiar de indicativo selecciona otra base local. No altera otros libros.
+- Las copias de seguridad JSON contienen datos personales de los contactos.
+- El cambio de cuenta de Google y el enlace con sus archivos se implementarán
+  en la fase de autenticación; una distintiva sola NO verifica la identidad.
+- Guardar un respaldo JSON antes de actualizar o cambiar de dispositivo.
+- Con esta versión dos dispositivos aún NO se sincronizan entre sí.
 
-PRECAUCIONES
-- Si se borran datos del sitio/navegador, los QSO pueden perderse.
-- Guardar una copia JSON periódicamente y verificar que se descargó bien.
-- ADIF sólo exporta QSO, no reconstruye ruedas editables: usar JSON para respaldo total.
-- La banda y modo se SUGIEREN por frecuencia, no validan habilitaciones por licencia.
-- El mapa de locators es esquemático, no una cartografía detallada.
-- La numeración de ruedas es correlativa sólo dentro de cada dispositivo; podrá
-  haber números iguales si creás ruedas en varios dispositivos sin sincronizar.
-- No es un widget nativo de Android; es una PWA que puede agregarse al inicio.
+NOTAS SOBRE ADIF
+- Los tiempos QSO_DATE y TIME_ON en ADIF se interpretan como UTC, conforme
+  al uso estándar del formato. El historial muestra el horario local del equipo.
+- Se aceptan archivos de hasta 20 MiB y hasta 50.000 QSO por archivo.
+- La comparación de duplicados al minuto puede considerar iguales contactos
+  realmente distintos que coincidan en ese minuto, modo y frecuencia.
+- La importación es solo local: Google OAuth / Sheets sigue pendiente.
+- La opción de configurar la SD no verifica la identidad del titular.
