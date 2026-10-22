@@ -1,0 +1,61 @@
+QSO LOG — LW2HAR — EDICIÓN OFFLINE 1.1
+====================================
+
+QUÉ CONTIENE
+- index.html: pantalla principal.
+- styles.css: presentación para computadora y móvil.
+- app.js: registro y base local IndexedDB.
+- sw.js: archivos de aplicación disponibles sin conexión después de la primera carga.
+- manifest.webmanifest e iconos: instalación como aplicación web (PWA).
+
+QUÉ FUNCIONA
+1. Guardar, editar y borrar contactos individuales.
+2. Frecuencia introducida en kHz, sugerencia automática de banda y modo editable.
+3. Fecha y hora local, UTC interno para exportar ADIF.
+4. Indicativos repetidos, búsqueda y consulta del historial.
+5. Ruedas numeradas: participantes, turno manual, reordenar, retirar/reactivar,
+   finalizar/reabrir, editar y eliminar. Cada participante genera un solo QSO.
+6. Mapa esquemático de contactos calculado desde locators Maidenhead.
+7. Exportación ADIF, copia completa JSON e importación de esa copia.
+8. Funcionamiento sin Internet después de primera instalación vía HTTPS.
+
+CÓMO ABRIRLA EN LA COMPUTADORA
+- Extraer TODOS los archivos del ZIP a una carpeta.
+- Como prueba rápida, probar doble clic en index.html. La compatibilidad del almacenamiento
+  al abrir archivos locales (file://) varía según navegador. Para uso confiable, publicar
+  en HTTPS o abrir un servidor local.
+- Con Python instalado: abrir una terminal en la carpeta y ejecutar:
+      python -m http.server 8000
+  Luego entrar a http://localhost:8000 desde el navegador en la computadora.
+
+CÓMO INSTALARLA EN ANDROID
+1. Subir el contenido de la carpeta a un alojamiento estático HTTPS, por ejemplo
+   GitHub Pages o Netlify Drop. La carpeta debe contener index.html en la raíz.
+2. Abrir la URL publicada desde Chrome en el teléfono o la tableta CON INTERNET.
+3. En Chrome, menú de tres puntos > Instalar aplicación / Añadir a pantalla de inicio.
+4. Abrir una vez la aplicación con conexión y luego probar en modo avión.
+
+IMPORTANTE: Cada navegador o dispositivo tiene su PROPIA base local. No hay
+sincronización entre teléfono, tableta y computadora en esta versión. Para mover
+registros, descargar copia JSON en Datos e importarla en el otro dispositivo.
+
+GOOGLE SHEETS
+La planilla 'QSO Log LW2HAR' ya existe en Drive con pestañas QSO, RUEDAS,
+PARTICIPANTES y CONFIGURACION. No está vinculada a esta versión de la interfaz.
+El servidor Apps Script que se creó antes queda intacto y no necesita alterarse.
+No ampliar su acceso a 'Cualquier persona' ni publicar la API_KEY. La próxima fase
+requiere una solución autenticada para sincronización bidireccional.
+
+QRZ
+No hay consultas QRZ ni subida automática a QRZ Logbook en esta edición.
+Las credenciales NO deben introducirse en la interfaz ni incrustarse en archivos web.
+
+PRECAUCIONES
+- Si se borran datos del sitio/navegador, los QSO pueden perderse.
+- Guardar una copia JSON periódicamente y verificar que se descargó bien.
+- ADIF sólo exporta QSO, no reconstruye ruedas editables: usar JSON para respaldo total.
+- La banda y modo se SUGIEREN por frecuencia, no validan habilitaciones por licencia.
+- El mapa de locators es esquemático, no una cartografía detallada.
+- La numeración de ruedas es correlativa sólo dentro de cada dispositivo; podrá
+  haber números iguales si creás ruedas en varios dispositivos sin sincronizar.
+- No es un widget nativo de Android; es una PWA que puede agregarse al inicio.
